@@ -1,5 +1,12 @@
 import { EventConfig, Participant } from '../types';
 import { initialEventConfig, initialParticipants } from '../data/initialData';
+import { 
+  saveParticipantToFirestore, 
+  saveConfigToFirestore, 
+  deleteParticipantFromFirestore, 
+  checkInParticipantInFirestore,
+  resetDatabaseToDefaults
+} from '../firebase';
 
 const STORAGE_PARTICIPANTS_KEY = 'kajian_anak_participants_v1';
 const STORAGE_CONFIG_KEY = 'kajian_anak_config_v1';
@@ -8,7 +15,6 @@ export function loadParticipants(): Participant[] {
   try {
     const data = localStorage.getItem(STORAGE_PARTICIPANTS_KEY);
     if (!data) {
-      saveParticipants(initialParticipants);
       return initialParticipants;
     }
     return JSON.parse(data);
@@ -29,7 +35,6 @@ export function loadEventConfig(): EventConfig {
   try {
     const data = localStorage.getItem(STORAGE_CONFIG_KEY);
     if (!data) {
-      saveEventConfig(initialEventConfig);
       return initialEventConfig;
     }
     return JSON.parse(data);
@@ -46,7 +51,25 @@ export function saveEventConfig(config: EventConfig): void {
   }
 }
 
-export function resetToDefaults(): { participants: Participant[]; config: EventConfig } {
+export async function addOrUpdateParticipantSync(participant: Participant): Promise<void> {
+  // Save to Firestore cloud
+  await saveParticipantToFirestore(participant);
+}
+
+export async function deleteParticipantSync(participantId: string): Promise<void> {
+  await deleteParticipantFromFirestore(participantId);
+}
+
+export async function updateConfigSync(config: EventConfig): Promise<void> {
+  await saveConfigToFirestore(config);
+}
+
+export async function checkInParticipantSync(participantId: string): Promise<void> {
+  await checkInParticipantInFirestore(participantId);
+}
+
+export async function resetAllDataSync(): Promise<{ participants: Participant[]; config: EventConfig }> {
+  await resetDatabaseToDefaults();
   saveParticipants(initialParticipants);
   saveEventConfig(initialEventConfig);
   return { participants: initialParticipants, config: initialEventConfig };

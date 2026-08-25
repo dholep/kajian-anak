@@ -5,8 +5,16 @@ import {
   loadParticipants, 
   saveEventConfig, 
   saveParticipants,
-  resetToDefaults
+  addOrUpdateParticipantSync,
+  deleteParticipantSync,
+  updateConfigSync,
+  checkInParticipantSync,
+  resetAllDataSync
 } from './utils/storage';
+import { 
+  subscribeParticipants, 
+  subscribeEventConfig 
+} from './firebase';
 import { getAdminSession, logoutAdmin } from './utils/auth';
 import { Navbar } from './components/Navbar';
 import { RegistrationForm } from './components/RegistrationForm';
@@ -17,22 +25,22 @@ import { AdminLogin } from './components/AdminLogin';
 import { QRScannerModal } from './components/QRScannerModal';
 import { 
   Sparkles, 
-  Heart, 
-  MessageCircle, 
   ShieldCheck, 
   QrCode,
   Calendar,
   MapPin,
   Clock,
   Phone,
-  Lock
+  Lock,
+  Cloud
 } from 'lucide-react';
 
 export default function App() {
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>(loadParticipants());
   const [config, setConfig] = useState<EventConfig>(loadEventConfig());
   const [activeTab, setActiveTab] = useState<ActiveTab>('registration');
   const [adminUser, setAdminUser] = useState<AdminUser | null>(getAdminSession());
+  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(true);
 
   // Success Modal state
   const [newlyRegistered, setNewlyRegistered] = useState<Participant | null>(null);
@@ -40,29 +48,79 @@ export default function App() {
   // Scanner Modal state (can also be triggered as a popup)
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
-  // Load from LocalStorage on mount
+  // Real-time Cloud Firebase Subscription
   useEffect(() => {
-    setParticipants(loadParticipants());
-    setConfig(loadEventConfig());
+    // 1. Subscribe to Realtime Firestore Participants
+    const unsubscribeParticipants = subscribeParticipants((cloudParticipants) => {
+      if (cloudParticipants && cloudParticipants.length >= 0) {
+        setParticipants(cloudParticipants);
+        saveParticipants(cloudParticipants);
+        setIsCloudSynced(true);
+      }
+    });
+
+    // 2. Subscribe to Realtime Firestore Event Configuration
+    const unsubscribeConfig = subscribeEventConfig((cloudConfig) => {
+      if (cloudConfig) {
+        setConfig(cloudConfig);
+        saveEventConfig(cloudConfig);
+        setIsCloudSynced(true);
+      }
+    });
+
     setAdminUser(getAdminSession());
+
+    return () => {
+      if (unsubscribeParticipants) unsubscribeParticipants();
+      if (unsubscribeConfig) unsubscribeConfig();
+    };
   }, []);
 
-  // Save changes to storage
-  const handleUpdateParticipants = (updated: Participant[]) => {
+  // Save changes to storage & Cloud
+  const handleUpdateParticipants = async (updated: Participant[]) => {
     setParticipants(updated);
     saveParticipants(updated);
+
+    // Sync all to Firestore (detect if added/updated or deleted)
+    try {
+      // Find deleted ids
+      const currentIds = new Set(updated.map((p) => p.id));
+      for (const oldP of participants) {
+        if (!currentIds.has(oldP.id)) {
+          await deleteParticipantSync(oldP.id);
+        }
+      }
+      // Upsert updated ones
+      for (const p of updated) {
+        await addOrUpdateParticipantSync(p);
+      }
+    } catch (err) {
+      console.warn('Sync participants warning:', err);
+    }
   };
 
-  const handleUpdateConfig = (updatedConfig: EventConfig) => {
+  const handleUpdateConfig = async (updatedConfig: EventConfig) => {
     setConfig(updatedConfig);
     saveEventConfig(updatedConfig);
+    try {
+      await updateConfigSync(updatedConfig);
+    } catch (err) {
+      console.warn('Sync config warning:', err);
+    }
   };
 
   // Participant Registration Success
-  const handleRegisterSuccess = (participant: Participant) => {
-    const updated = [participant, ...participants];
-    handleUpdateParticipants(updated);
+  const handleRegisterSuccess = async (participant: Participant) => {
+    const updated = [participant, ...participants.filter((p) => p.id !== participant.id)];
+    setParticipants(updated);
+    saveParticipants(updated);
     setNewlyRegistered(participant);
+
+    try {
+      await addOrUpdateParticipantSync(participant);
+    } catch (err) {
+      console.warn('Sync new participant warning:', err);
+    }
   };
 
   // Admin Authentication Handlers
@@ -93,16 +151,22 @@ export default function App() {
     });
 
     if (foundUpdated) {
-      handleUpdateParticipants(updated);
+      setParticipants(updated);
+      saveParticipants(updated);
+      checkInParticipantSync(id).catch(() => {});
     }
     return foundUpdated;
   };
 
   // Reset to initial mock demo data
-  const handleResetDefaults = () => {
-    const defaults = resetToDefaults();
-    setParticipants(defaults.participants);
-    setConfig(defaults.config);
+  const handleResetDefaults = async () => {
+    try {
+      const defaults = await resetAllDataSync();
+      setParticipants(defaults.participants);
+      setConfig(defaults.config);
+    } catch {
+      // fallback
+    }
   };
 
   return (
@@ -247,7 +311,7 @@ export default function App() {
               </p>
               <div className="flex items-center gap-2 text-emerald-400 pt-1">
                 <ShieldCheck className="w-4 h-4" />
-                <span>Sistem Registrasi & Presensi Terverifikasi</span>
+                <span>Sistem Registrasi & Presensi Cloud Firestore Terverifikasi</span>
               </div>
             </div>
 

@@ -7,9 +7,10 @@ import {
   EyeOff, 
   ArrowRight, 
   AlertCircle, 
-  ArrowLeft
+  ArrowLeft,
+  RotateCcw
 } from 'lucide-react';
-import { loginAdmin } from '../utils/auth';
+import { loginAdmin, resetAdminCredentials } from '../utils/auth';
 import { AdminUser } from '../types';
 
 interface AdminLoginProps {
@@ -26,16 +27,18 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setResetSuccess(false);
 
     if (!username.trim()) {
       setError('Masukkan username atau email admin.');
       return;
     }
-    if (!password) {
+    if (!password.trim()) {
       setError('Masukkan password admin.');
       return;
     }
@@ -52,7 +55,15 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
       } else {
         setError(result.message || 'Login gagal. Periksa kembali kredensial Anda.');
       }
-    }, 300);
+    }, 250);
+  };
+
+  const handleResetToDefault = () => {
+    resetAdminCredentials();
+    setUsername('admin');
+    setPassword('admin123');
+    setError(null);
+    setResetSuccess(true);
   };
 
   return (
@@ -99,9 +110,29 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
         <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-4">
           
           {error && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <span>{error}</span>
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-2 animate-in fade-in">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+              <div className="pt-1 border-t border-rose-200/60 flex items-center justify-between">
+                <span className="text-[11px] text-rose-700">Lupa password atau baru buka di HP?</span>
+                <button
+                  type="button"
+                  onClick={handleResetToDefault}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white hover:bg-rose-100/60 text-rose-800 border border-rose-300 font-bold text-[10px] transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Pulihkan Akun Default</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {resetSuccess && (
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 animate-in fade-in">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Kredensial berhasil diset ke <strong>admin</strong> / <strong>admin123</strong>. Silakan tekan tombol Masuk.</span>
             </div>
           )}
 
@@ -115,8 +146,11 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Contoh: admin atau panitia@kajian.id"
+              placeholder="admin"
               autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all placeholder:text-slate-400"
             />
           </div>
@@ -136,12 +170,15 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Masukkan password..."
                 autoComplete="current-password"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all placeholder:text-slate-400"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
                 title={showPassword ? 'Sembunyikan password' : 'Lihat password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
