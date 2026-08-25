@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Pendaftaran Kajian Anak",
+  "description": "Sistem pendaftaran online kajian anak dengan pembatasan kuota ikhwan & akhwat, konfirmasi WhatsApp, tiket QR code, scanner absensi kehadiran, rekap spreadsheet, dan analitik demografi.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

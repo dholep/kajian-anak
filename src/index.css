@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+@media print {
+  body {
+    background-color: white !important;
+  }
+  
+  #main-header,
+  #app-footer,
+  #nav-tab-registration,
+  #nav-tab-my-ticket,
+  #nav-tab-admin,
+  #nav-tab-scanner,
+  #close-success-modal-btn,
+  #registration-success-overlay > div > div.bg-slate-50,
+  #registration-success-overlay > div > div.p-5 > div.bg-emerald-50\/70,
+  button {
+    display: none !important;
+  }
+
+  #registration-success-overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  #registration-success-modal {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+  }
+
+  #printable-e-ticket {
+    border: 2px solid #059669 !important;
+    background: white !important;
+  }
+}
