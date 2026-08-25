@@ -94,6 +94,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordNotice, setPasswordNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Clear all data confirmation modal state
+  const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
+
   const handleChangePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordNotice(null);
@@ -149,6 +152,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleDeleteParticipant = (id: string) => {
     const updated = participants.filter((p) => p.id !== id);
     onUpdateParticipants(updated);
+  };
+
+  // Clear All Participants
+  const handleClearAllParticipants = () => {
+    onUpdateParticipants([]);
+    setIsClearAllModalOpen(false);
   };
 
   // Handle Manual Walk-In Add
@@ -545,6 +554,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <Plus className="w-3.5 h-3.5" />
                   <span>+ Tambah Walk-in</span>
                 </button>
+
+                {participants.length > 0 && (
+                  <button
+                    id="recap-clear-all-btn"
+                    onClick={() => setIsClearAllModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold border border-rose-200 transition-colors"
+                    title="Kosongkan / hapus semua data peserta"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Kosongkan Data ({participants.length})</span>
+                  </button>
+                )}
 
               </div>
 
@@ -1110,13 +1131,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={onResetDefaults}
-                className="px-4 py-2 rounded-xl text-rose-600 hover:bg-rose-50 border border-rose-200 text-xs font-semibold transition-colors"
-              >
-                Reset ke Data Awal
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsClearAllModalOpen(true)}
+                  className="px-3.5 py-2 rounded-xl text-rose-700 hover:bg-rose-50 border border-rose-200 text-xs font-semibold transition-colors"
+                >
+                  Kosongkan Semua Data Peserta
+                </button>
+                <button
+                  type="button"
+                  onClick={onResetDefaults}
+                  className="px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 border border-slate-200 text-xs font-semibold transition-colors"
+                  title="Mengisi kembali dengan 12 data contoh simulasi & jadwal default"
+                >
+                  Muat Data Demo (12 Peserta)
+                </button>
+              </div>
 
               <button
                 type="submit"
@@ -1506,6 +1537,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: CONFIRM CLEAR ALL PARTICIPANTS */}
+      {isClearAllModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <h3 className="font-bold text-lg text-center text-slate-900 mb-1">
+              Kosongkan Semua Data Peserta?
+            </h3>
+            <p className="text-xs text-center text-slate-600 mb-5 leading-relaxed">
+              Tindakan ini akan menghapus permanen <strong>{participants.length} data peserta</strong> dari database cloud Firestore dan browser. Data yang sudah dihapus tidak dapat dipulihkan.
+            </p>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsClearAllModalOpen(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAllParticipants}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition-colors"
+              >
+                Ya, Hapus Semua Data
+              </button>
+            </div>
           </div>
         </div>
       )}

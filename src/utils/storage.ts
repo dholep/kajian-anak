@@ -4,6 +4,7 @@ import {
   saveParticipantToFirestore, 
   saveConfigToFirestore, 
   deleteParticipantFromFirestore, 
+  deleteAllParticipantsFromFirestore,
   checkInParticipantInFirestore,
   resetDatabaseToDefaults
 } from '../firebase';
@@ -14,12 +15,12 @@ const STORAGE_CONFIG_KEY = 'kajian_anak_config_v1';
 export function loadParticipants(): Participant[] {
   try {
     const data = localStorage.getItem(STORAGE_PARTICIPANTS_KEY);
-    if (!data) {
-      return initialParticipants;
+    if (data !== null) {
+      return JSON.parse(data);
     }
-    return JSON.parse(data);
+    return [];
   } catch {
-    return initialParticipants;
+    return [];
   }
 }
 
@@ -34,10 +35,10 @@ export function saveParticipants(participants: Participant[]): void {
 export function loadEventConfig(): EventConfig {
   try {
     const data = localStorage.getItem(STORAGE_CONFIG_KEY);
-    if (!data) {
-      return initialEventConfig;
+    if (data !== null) {
+      return JSON.parse(data);
     }
-    return JSON.parse(data);
+    return initialEventConfig;
   } catch {
     return initialEventConfig;
   }
@@ -58,6 +59,11 @@ export async function addOrUpdateParticipantSync(participant: Participant): Prom
 
 export async function deleteParticipantSync(participantId: string): Promise<void> {
   await deleteParticipantFromFirestore(participantId);
+}
+
+export async function deleteAllParticipantsSync(): Promise<void> {
+  await deleteAllParticipantsFromFirestore();
+  saveParticipants([]);
 }
 
 export async function updateConfigSync(config: EventConfig): Promise<void> {

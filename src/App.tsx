@@ -7,6 +7,7 @@ import {
   saveParticipants,
   addOrUpdateParticipantSync,
   deleteParticipantSync,
+  deleteAllParticipantsSync,
   updateConfigSync,
   checkInParticipantSync,
   resetAllDataSync
@@ -80,6 +81,16 @@ export default function App() {
   const handleUpdateParticipants = async (updated: Participant[]) => {
     setParticipants(updated);
     saveParticipants(updated);
+
+    // If clearing all participants
+    if (updated.length === 0) {
+      try {
+        await deleteAllParticipantsSync();
+      } catch (err) {
+        console.warn('Delete all participants error:', err);
+      }
+      return;
+    }
 
     // Sync all to Firestore (detect if added/updated or deleted)
     try {

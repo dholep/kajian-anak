@@ -35,13 +35,6 @@ const ADMIN_DOC_ID = 'admin_account';
 export function subscribeParticipants(callback: (participants: Participant[]) => void) {
   const participantsRef = collection(db, PARTICIPANTS_COLLECTION);
   return onSnapshot(participantsRef, (snapshot) => {
-    if (snapshot.empty) {
-      // If collection is empty on cloud, seed with initial mock data
-      seedInitialParticipants().then(() => {
-        callback(initialParticipants);
-      });
-      return;
-    }
     const list: Participant[] = [];
     snapshot.forEach((docSnap) => {
       list.push(docSnap.data() as Participant);
@@ -112,6 +105,24 @@ export async function deleteParticipantFromFirestore(participantId: string): Pro
     await deleteDoc(docRef);
   } catch (err) {
     console.error('Error deleting participant from Firestore:', err);
+    throw err;
+  }
+}
+
+/**
+ * Delete all participants from Firestore (clear database)
+ */
+export async function deleteAllParticipantsFromFirestore(): Promise<void> {
+  try {
+    const participantsRef = collection(db, PARTICIPANTS_COLLECTION);
+    const snap = await getDocs(participantsRef);
+    const batch = writeBatch(db);
+    snap.forEach((d) => {
+      batch.delete(d.ref);
+    });
+    await batch.commit();
+  } catch (err) {
+    console.error('Error clearing all participants from Firestore:', err);
     throw err;
   }
 }
