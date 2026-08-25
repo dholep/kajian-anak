@@ -1,5 +1,9 @@
 import { AdminUser } from '../types';
-import { getCloudAdminCredentials, saveCloudAdminCredentials } from '../firebase';
+import { 
+  getCloudAdminCredentials, 
+  saveCloudAdminCredentials, 
+  subscribeAdminCredentials 
+} from '../firebase';
 
 const STORAGE_ADMIN_SESSION_KEY = 'kajian_anak_admin_session_v1';
 const STORAGE_ADMIN_PASSWORD_KEY = 'kajian_anak_admin_password_v1';
@@ -13,17 +17,29 @@ let memoryUsername = DEFAULT_USERNAME;
 let memoryPassword = DEFAULT_PASSWORD;
 let memorySession: AdminUser | null = null;
 
-// Background initial sync from Firestore for admin credentials
+// Initial fetch from cloud
 getCloudAdminCredentials().then((creds) => {
-  if (creds) {
-    memoryUsername = creds.username;
+  if (creds && creds.passwordHash) {
+    memoryUsername = creds.username || DEFAULT_USERNAME;
     memoryPassword = creds.passwordHash;
     try {
-      localStorage.setItem(STORAGE_ADMIN_USERNAME_KEY, creds.username);
-      localStorage.setItem(STORAGE_ADMIN_PASSWORD_KEY, creds.passwordHash);
+      localStorage.setItem(STORAGE_ADMIN_USERNAME_KEY, memoryUsername);
+      localStorage.setItem(STORAGE_ADMIN_PASSWORD_KEY, memoryPassword);
     } catch {}
   }
 }).catch(() => {});
+
+// Real-time listener for cloud credential updates (sync across mobile & desktop)
+subscribeAdminCredentials((creds) => {
+  if (creds && creds.passwordHash) {
+    memoryUsername = creds.username || DEFAULT_USERNAME;
+    memoryPassword = creds.passwordHash;
+    try {
+      localStorage.setItem(STORAGE_ADMIN_USERNAME_KEY, memoryUsername);
+      localStorage.setItem(STORAGE_ADMIN_PASSWORD_KEY, memoryPassword);
+    } catch {}
+  }
+});
 
 /**
  * Get current stored credentials
@@ -59,6 +75,7 @@ export function getAdminSession(): AdminUser | null {
 
 /**
  * Login admin with username and password
+ * Enforces strictly the CURRENT active password.
  */
 export function loginAdmin(usernameInput: string, passwordInput: string): { success: boolean; message: string; user?: AdminUser } {
   const { username, passwordHash } = getStoredAdminCredentials();
@@ -69,13 +86,13 @@ export function loginAdmin(usernameInput: string, passwordInput: string): { succ
   const cleanPassword = (passwordInput || '').trim();
   const cleanStoredPassword = (passwordHash || DEFAULT_PASSWORD).trim();
 
-  // Accept username or aliases
+  // Accept valid username or registered admin email
   const isUsernameMatch = cleanUsername === cleanStoredUsername || 
                           cleanUsername === 'admin' || 
                           cleanUsername === 'panitia@kajian.id';
                           
-  // Accept current stored password OR default password as safety fallback
-  const isPasswordMatch = cleanPassword === cleanStoredPassword || cleanPassword === DEFAULT_PASSWORD;
+  // Match strictly against the active stored password
+  const isPasswordMatch = cleanPassword === cleanStoredPassword;
 
   if (isUsernameMatch && isPasswordMatch) {
     const user: AdminUser = {
@@ -95,7 +112,7 @@ export function loginAdmin(usernameInput: string, passwordInput: string): { succ
 
   return { 
     success: false, 
-    message: 'Username atau password tidak sesuai. Pastikan tidak ada spasi tambahan atau huruf besar otomatis.' 
+    message: 'Username atau password salah. Pastikan password yang dimasukkan adalah password yang paling baru.' 
   };
 }
 
@@ -122,7 +139,7 @@ export function changeAdminPassword(
   const cleanCurrent = (currentPassword || '').trim();
   const cleanStored = (passwordHash || DEFAULT_PASSWORD).trim();
 
-  if (cleanCurrent !== cleanStored && cleanCurrent !== DEFAULT_PASSWORD) {
+  if (cleanCurrent !== cleanStored) {
     return { success: false, message: 'Password saat ini tidak sesuai.' };
   }
 
@@ -138,7 +155,7 @@ export function changeAdminPassword(
   }
   memoryPassword = cleanNew;
 
-  // Sync to Firestore Cloud so it works on mobile phones immediately
+  // Sync to Firestore Cloud so it works immediately across mobile phones and desktop
   saveCloudAdminCredentials(username, cleanNew).catch((err) => {
     console.warn('Cloud password sync notice:', err);
   });

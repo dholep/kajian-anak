@@ -5,6 +5,7 @@ import {
   doc, 
   setDoc, 
   getDocs, 
+  getDoc,
   onSnapshot, 
   updateDoc, 
   deleteDoc, 
@@ -69,6 +70,23 @@ export function subscribeEventConfig(callback: (config: EventConfig) => void) {
     }
   }, (err) => {
     console.warn('Firestore event config subscription fallback:', err);
+  });
+}
+
+/**
+ * Subscribe to real-time Admin Credentials
+ */
+export function subscribeAdminCredentials(callback: (creds: { username: string; passwordHash: string }) => void) {
+  const adminDocRef = doc(db, SETTINGS_COLLECTION, ADMIN_DOC_ID);
+  return onSnapshot(adminDocRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data() as { username: string; passwordHash: string };
+      if (data && data.passwordHash) {
+        callback(data);
+      }
+    }
+  }, (err) => {
+    console.warn('Firestore admin credentials subscription notice:', err);
   });
 }
 
@@ -179,14 +197,11 @@ export async function resetDatabaseToDefaults(): Promise<void> {
 export async function getCloudAdminCredentials(): Promise<{ username: string; passwordHash: string } | null> {
   try {
     const adminDocRef = doc(db, SETTINGS_COLLECTION, ADMIN_DOC_ID);
-    const snap = await getDocs(collection(db, SETTINGS_COLLECTION));
-    let creds: { username: string; passwordHash: string } | null = null;
-    snap.forEach((d) => {
-      if (d.id === ADMIN_DOC_ID) {
-        creds = d.data() as { username: string; passwordHash: string };
-      }
-    });
-    return creds;
+    const docSnap = await getDoc(adminDocRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as { username: string; passwordHash: string };
+    }
+    return null;
   } catch {
     return null;
   }

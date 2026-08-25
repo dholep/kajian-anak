@@ -7,10 +7,9 @@ import {
   EyeOff, 
   ArrowRight, 
   AlertCircle, 
-  ArrowLeft,
-  RotateCcw
+  ArrowLeft
 } from 'lucide-react';
-import { loginAdmin, resetAdminCredentials } from '../utils/auth';
+import { loginAdmin } from '../utils/auth';
 import { AdminUser } from '../types';
 
 interface AdminLoginProps {
@@ -27,12 +26,9 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [resetSuccess, setResetSuccess] = useState(false);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setResetSuccess(false);
 
     if (!username.trim()) {
       setError('Masukkan username atau email admin.');
@@ -45,7 +41,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
 
     setIsLoading(true);
 
-    // Short simulated authentication check for crisp UX
+    // Short authentication check for crisp UX
     setTimeout(() => {
       const result = loginAdmin(username, password);
       setIsLoading(false);
@@ -56,14 +52,6 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
         setError(result.message || 'Login gagal. Periksa kembali kredensial Anda.');
       }
     }, 250);
-  };
-
-  const handleResetToDefault = () => {
-    resetAdminCredentials();
-    setUsername('admin');
-    setPassword('admin123');
-    setError(null);
-    setResetSuccess(true);
   };
 
   return (
@@ -110,29 +98,9 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
         <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-4">
           
           {error && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-2 animate-in fade-in">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <span>{error}</span>
-              </div>
-              <div className="pt-1 border-t border-rose-200/60 flex items-center justify-between">
-                <span className="text-[11px] text-rose-700">Lupa password atau baru buka di HP?</span>
-                <button
-                  type="button"
-                  onClick={handleResetToDefault}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white hover:bg-rose-100/60 text-rose-800 border border-rose-300 font-bold text-[10px] transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Pulihkan Akun Default</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {resetSuccess && (
-            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 animate-in fade-in">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Kredensial berhasil diset ke <strong>admin</strong> / <strong>admin123</strong>. Silakan tekan tombol Masuk.</span>
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
 
